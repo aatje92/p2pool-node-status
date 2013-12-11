@@ -5,8 +5,6 @@ An alternative clean p2pool node status web page.  This web interface is
 not intended to be a replace for the default or alternative web-static. It
 is thought to run in a sperate web server environment.
 
-![Screenshot](img/screenshot.png).
-
 The node status page uses Bootstrap, jQuery and Highchart.
 
 ## Installation

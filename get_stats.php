@@ -8,7 +8,7 @@ $debug= false;
 
 if($debug) {
   $_GET['callback']= 'foobar';
-  $_GET['t']= 'graph_hashrate';
+  $_GET['t']= 'local_stats';
   $_GET['i']= 'day';
   $_GET['host']= 'localhost';
   $_GET['port']= '9332';
@@ -101,6 +101,8 @@ function getLocalStats() {
   $share_diff= fetchJSON($p2pool_api['difficulty']);
   $fee= fetchJSON($p2pool_api['fee']);
   $rate= fetchJSON($p2pool_api['rate']);
+
+  sendJSON('foobar', $local_stats);
 
   $local= array();
   // time to block in seconds

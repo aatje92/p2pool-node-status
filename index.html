@@ -11,16 +11,16 @@
     <title>p2pool node stats</title>
 
     <!-- Bootstrap core CSS -->
-    <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css">
-    <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap-theme.min.css">
-    <link rel="stylesheet" href="//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.min.css">
-    <!-- <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootswatch/3.0.2/slate/bootstrap.min.css"> -->
-    <script src="http://code.jquery.com/jquery-2.0.3.min.js"></script>
-    <script src="//netdna.bootstrapcdn.com/bootstrap/3.0.3/js/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/bootstrap-theme.min.css">
+    <link rel="stylesheet" href="css/font-awesome.min.css">
+
+    <script src="js/jquery-2.0.3.min.js"></script>
+    <script src="js/bootstrap.min.js"></script>
     <script src="js/jquery-dateFormat.min.js"></script>
 
-    <script src="http://code.highcharts.com/highcharts.js"></script>
-    <script src="http://code.highcharts.com/modules/exporting.js"></script>
+    <script src="js/highcharts.js"></script>
+    <script src="js/exporting.js"></script>
 
     <script src="js/util.js"></script>
     <script src="js/charts.js"></script>
@@ -52,6 +52,30 @@
 
       <div id='chart'></div>
 
+      <h4>Status</h4>
+      <table id='status' class="table table-hover" border='0'>
+        <tr>
+          <td>Local rate:</td><td id='local_rate'></td>
+          <td>Expected time to share:</td><td id='expected_time_to_share'></td>
+        </tr>
+        <tr>
+          <td>Global pool rate:</td><td id='global_rate'></td>
+          <td>Share difficulty</td><td id='share_difficulty'></td>
+        </tr>
+        <tr>
+          <td>Current block value</td><td id='block_value'></td>
+          <td>Shares:</td><td id='shares'></td>
+        </tr>
+        <tr>
+          <td>Payout if a block were found NOW</td><td id='payout_now'></td>
+          <td>Expected time to block:</td><td id='expected_time_to_block'></td>
+        </tr>
+        <tr>
+          <td>Node peers</td><td id='node_peers'></td>
+          <td>Node uptime:</td><td id='node_uptime'></td>
+        </tr>
+      </table>
+
       <h4>Active miners on this node</h4>
       <table id='active_miners' class="table table-hover">
         <tr>
@@ -80,7 +104,10 @@
     var myself= '';
 
     // the hostname and port of the p2pool node
-    var node_host= 'p2pool.tr2-it.de', node_port= '9332';
+    var node_host= 'localhost', node_port= '9332';
+
+    // things to remember
+    var local_hashrate= 0, local_doa_hashrate= 0;
 
     var fetchLocalPoolStats= function(url) {
       $.getJSON(url + '?callback=?', {
@@ -130,6 +157,7 @@
         t: 'active_miners',
         host: node_host, port: node_port,
       }, function(data) {
+        local_hashrate= 0, local_doa_hashrate= 0; // reset
         $.each(data, function(k, v) {
           // fill the user table
           tr= $('<tr/>').attr('id', k);
@@ -146,8 +174,14 @@
             .append(blockinfo));
           tr.append($('<td/>').attr('class', 'text-right')
             .append(formatHashrate(data[k].hashrate)));
+
+          local_hashrate+= data[k].hashrate;
+
           tr.append($('<td/>').attr('class', 'text-right')
             .append(formatHashrate(data[k].doa_hashrate)));
+
+          local_doa_hashrate+= data[k].doa_hashrate;
+
           tr.append($('<td/>').attr('class', 'text-right')
             .append((parseFloat(data[k].doa_prop) * 100).toFixed(2) + '%'));
 
@@ -162,6 +196,16 @@
 
           $('#'+k).remove(); $('#active_miners').append(tr);
         });
+
+        // print the local hashrate / dead on arrival hashrate and ratio
+        {
+          _rate=formatHashrate(local_hashrate);
+          _doa= formatHashrate(local_doa_hashrate);
+          _prop= (local_doa_hashrate/local_hashrate)*100;
+          $('#local_rate')
+            .text(_rate + ' (' + _doa + ' / ' + _prop.toFixed(2) + '% DOA)');
+        }
+
         setUpdateTime();
       });
     };
@@ -221,7 +265,11 @@
     };
 
     $(document).ready(function() {
-      $('#node').text(node_host + ':' + node_port);
+      node_link= $('<a/>')
+        .attr('href', ('http://' + node_host + ':' + node_port))
+        .attr('target', '_blank')
+        .text(node_host + ':' + node_port);
+      $('#node').append(node_link);
 
       // the URL to the JSONP PHP script.
       url= 'http://xela.columba.uberspace.de/p2pool-stats/get_stats.php';
@@ -229,7 +277,7 @@
       // re-fetch some data every 10 seconds
       setInterval(function() {
         fetchActiveMiners(url);
-      }, 10 * 1000);
+      }, 30 * 1000);
 
       fetchActiveMiners(url);
       fetchRecentBlocks(url);
