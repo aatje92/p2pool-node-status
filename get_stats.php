@@ -6,16 +6,21 @@
 // $debug= true;
 $debug= false;
 
-// Defines the access to the p2pool
+if($debug) {
+  $_GET['callback']= 'foobar';
+  $_GET['t']= 'graph_hashrate';
+  $_GET['i']= 'day';
+  $_GET['host']= 'localhost';
+  $_GET['port']= '9332';
+}
 
-$p2pool= array(
-  'http' => 'http', // can be http or https
-  'host' => 'localhost',
-  'port' => '9332',
-);
+if(!isset($_GET['host']) || !isset($_GET['port'])) {
+  sendJSON($_GET['callback'],
+    array('etx' => 'Missing attribute: host or port', 'ecd' => 42));
+}
 
 // API url
-$p2pool_url= $p2pool['http'].'://'.$p2pool['host'].":".$p2pool['port'];
+$p2pool_url= 'http://'.$_GET['host'].":".$_GET['port'];
 
 // APIs
 $p2pool_api= array(
@@ -30,7 +35,11 @@ $p2pool_api= array(
   'global_stats'        => 'global_stats',
   'recent_blocks'       => 'recent_blocks',
   'uptime'              => 'uptime',
-  'currency_info'       => '/web/currency_info',
+  'currency_info'       => 'web/currency_info',
+  'graph'               => array(
+    'hashrate'          => 'web/graph_data/local_hash_rate/last_',
+    'dead_hashrate'     => 'web/graph_data/local_dead_hash_rate/last_',
+  ),
 );
 
 // ======================================================================
@@ -100,12 +109,17 @@ function getLocalStats() {
   return $local;
 }
 
-// ======================================================================
-
-if($debug) {
-  $_GET['callback']= 'foobar';
-  $_GET['t']= 'local_stats';
+function getGraphHashrate($interval) {
+  global $p2pool_api;
+  $graph= array();
+  $graph['hashrate']=
+    fetchJSON($p2pool_api['graph']['hashrate'].$interval);
+  $graph['doa_hashrate']=
+    fetchJSON($p2pool_api['graph']['dead_hashrate'].$interval);
+  return $graph;
 }
+
+// ======================================================================
 
 // client specifies, what to fetch
 
@@ -123,6 +137,9 @@ if(isset($_GET['t'])) {
       $recent_blocks= getRecentBlocks();
       sendJSON($_GET['callback'], $recent_blocks);
       break;
+    case 'graph_hashrate':
+      $graph_hashrate= getGraphHashrate($_GET['i']);
+      sendJSON($_GET['callback'], $graph_hashrate);
     default:
       sendJSON($_GET['callback'],
         array('etx' => 'unknown type', 'ecd' => 1));
@@ -133,41 +150,5 @@ else {
   sendJSON($_GET['callback'],
     array('etx' => 'type undefined', 'ecd' => 42));
 }
-
-// $rate= json_decode(file_get_contents($url . '/rate'), true);
-// $local_stats= json_decode(file_get_contents($url . '/local_stats'), true);
-// $users= json_decode(file_get_contents($url . '/users'), true);
-
-// // $fee= json_decode(file_get_contents($url . '/fee'), true);
-// // $current_payouts= json_decode(file_get_contents($url . '/current_payouts'), true);
-
-// $global_stats= json_decode(file_get_contents($url . '/global_stats'), true);
-
-// // $payout_addr= json_decode(file_get_contents($url . '/payout_addr'), true);
-// $recent_blocks= json_decode(file_get_contents($url . '/recent_blocks'), true);
-
-// $uptime= json_decode(file_get_contents($url . '/uptime'), true);
-
-
-
-
-// $hashrate_graph_day= json_decode(
-//     file_get_contents(
-//         $url . '/web/graph_data/local_hash_rate/last_day'));
-// $doa_graph_day= json_decode(
-//     file_get_contents(
-//         $url . '/web/graph_data/local_dead_hash_rate/last_day'));
-
-// $result= array(
-//   'rate' => $rate,
-//   'local' => $local_stats,
-//   'global' => $global_stats,
-//   'users' => $users,
-//   'recent_blocks' => $recent_blocks,
-//   'graph1' => $hashrate_graph_day,
-//   'graph2' => $doa_graph_day,
-// );
-
-// $json= json_encode($result);
 
 ?>

@@ -42,7 +42,12 @@
     <div class="container">
       <div class="page-header">
         <h1>p2pool node status</h1>
-        <b><small>Updated: <span id='updated'></span></small></b>
+        <b>
+          <small>
+            Node: <span id='node'></span>&nbsp;&dash;
+            Updated: <span id='updated'></span>
+          </small>
+        </b>
       </div>
 
       <div id='chart'></div>
@@ -74,9 +79,13 @@
     // define myself ... will be highlighted in results
     var myself= '';
 
+    // the hostname and port of the p2pool node
+    var node_host= 'p2pool.tr2-it.de', node_port= '9332';
+
     var fetchLocalPoolStats= function(url) {
       $.getJSON(url + '?callback=?', {
         t: 'local_stats',
+        host: node_host, port: node_port,
       }, function(data) {
         $.each(data.local.miner_hash_rates, function(k, v) {
           // fill the user table
@@ -110,6 +119,7 @@
     var fetchGlobalPoolStats= function(url) {
       $.getJSON(url + '?callback=?', {
         t: 'global_stats',
+        host: node_host, port: node_port,
       }, function(data) {
         setUpdateTime();
       });
@@ -118,6 +128,7 @@
     var fetchActiveMiners= function(url) {
       $.getJSON(url + '?callback=?', {
         t: 'active_miners',
+        host: node_host, port: node_port,
       }, function(data) {
         $.each(data, function(k, v) {
           // fill the user table
@@ -158,6 +169,7 @@
     var fetchRecentBlocks= function(url) {
       $.getJSON(url + '?callback=?', {
         t: 'recent_blocks',
+        host: node_host, port: node_port,
       }, function(data) {
         $.each(data, function(k, v) {
           ts= data[k].ts; num= data[k].number; hash= data[k].hash;
@@ -175,6 +187,31 @@
           $('#recent_blocks').append(tr);
         });
         setUpdateTime();
+      });
+    };
+
+    var fetchHashrateGraph= function(url) {
+      $.getJSON(url + '?callback=?', {
+        t: 'graph_hashrate',
+        i: 'day', // get the daily interval for now
+        host: node_host, port: node_port,
+      }, function(data) {
+        console.log(data);
+        hashrate= data.hashrate; doa= data.doa_hashrate;
+        hashgraph= []; doagraph= [];
+        $.each(hashrate, function(key, value) {
+          el= []; el.push(value[0] * 1000, value[1]);
+          hashgraph.push(el);
+        });
+        hashgraph.sort();
+
+        $.each(doa, function(key, value) {
+          el= []; el.push(value[0] * 1000, value[1]);
+          doagraph.push(el);
+        });
+        doagraph.sort();
+        draw(hashgraph, doagraph);
+        setUpdateTime();
       })
     };
 
@@ -184,6 +221,8 @@
     };
 
     $(document).ready(function() {
+      $('#node').text(node_host + ':' + node_port);
+
       // the URL to the JSONP PHP script.
       url= 'http://xela.columba.uberspace.de/p2pool-stats/get_stats.php';
 
@@ -194,6 +233,7 @@
 
       fetchActiveMiners(url);
       fetchRecentBlocks(url);
+      fetchHashrateGraph(url);
       $('#updated')
         .text($.format.date(
           new Date(), 'yyyy-MM-dd HH:mm:ss'));

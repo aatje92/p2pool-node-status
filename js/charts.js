@@ -1,18 +1,9 @@
 var draw= function(hashrate, doarate) {
-
   char= new Highcharts.Chart({
-    chart: {
-      renderTo: 'chart',
-    },
-    credits: {
-      enabled: false,
-    },
-    exporting: {
-      enabled: false,
-    },
-    title: {
-      text: '24 hour local hashrate'
-    },
+    chart: { renderTo: 'chart' },
+    credits: { enabled: false },
+    exporting: { enabled: false },
+    title: { text: '24 hour local hashrate' },
     rangeSelector: {
       selected: 1,
       enabled: true,
@@ -40,28 +31,20 @@ var draw= function(hashrate, doarate) {
     plotOptions: {
       areaspline: {
         fillColor: '#ace',
-        marker: {
-          enabled: false
-        },
+        marker: { enabled: false },
         lineWidth: 1,
         shadow: false,
         states: {
-          hover: {
-            lineWidth: 1
-          }
+          hover: { lineWidth: 1 }
         },
         threshold: null
       },
       spline: {
-        marker: {
-          enabled: false
-        },
+        marker: { enabled: false },
         lineWidth: 1,
         shadow: true,
         states: {
-          hover: {
-            lineWidth: 1
-          }
+          hover: { lineWidth: 1 }
         },
         threshold: null
       },
