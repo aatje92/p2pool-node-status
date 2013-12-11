@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="p2pool node status">
+    <meta name="author" content="Alexander Zschach">
+    <!--link rel="shortcut icon" href="favicon.png"-->
+
+    <title>p2pool node stats</title>
+
+    <!-- Bootstrap core CSS -->
+    <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css">
+    <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap-theme.min.css">
+    <link rel="stylesheet" href="//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.min.css">
+
+    <script src="http://code.jquery.com/jquery-2.0.3.min.js"></script>
+    <script src="//netdna.bootstrapcdn.com/bootstrap/3.0.3/js/bootstrap.min.js"></script>
+    <script src="js/jquery-dateFormat.min.js"></script>
+
+    <script src="http://code.highcharts.com/highcharts.js"></script>
+    <script src="http://code.highcharts.com/modules/exporting.js"></script>
+
+    <script src="js/util.js"></script>
+    <script src="js/charts.js"></script>
+
+    <!-- Custom styles for this template -->
+    <link href="grid.css" rel="stylesheet">
+
+    <!-- Just for debugging purposes. Don't actually copy this line! -->
+    <!--[if lt IE 9]><script src="../../docs-assets/js/ie8-responsive-file-warning.js"></script><![endif]-->
+
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+    <![endif]-->
+  </head>
+
+  <body>
+    <div class="container">
+      <div class="page-header">
+        <h1>p2pool node status</h1>
+        <b><small>Updated: <span id='updated'></span></small></b>
+      </div>
+
+      <div id='chart'></div>
+
+      <h4>Active miners on this node</h4>
+      <table id='active_miners' class="table table-hover">
+        <tr>
+          <th class='text-left'>Bitcoin Address</th>
+          <th class='text-right'>Hashrate</th>
+          <th class='text-right'>DOA Hashrate</th>
+          <th class='text-right'>DOA %</th>
+          <th class='text-right'>Predicted payout</th>
+        </tr>
+      </table>
+
+      <h4>Recent blocks</h4>
+      <table id='recent_blocks' class="table table-hover">
+        <tr>
+          <th>Date/Time</th>
+          <th>Number</th>
+          <th>Hash</th>
+          <th>Confirmations</th>
+        </tr>
+      </table>
+
+    </div> <!-- /container -->
+    <script type="text/javascript">
+
+    // define myself ... will be highlighted in results
+    //var me= '';
+
+    var fetchLocalPoolStats= function(url) {
+      $.getJSON(url + '?callback=?', {
+        t: 'local_stats',
+      }, function(data) {
+        $.each(data.local.miner_hash_rates, function(k, v) {
+          // fill the user table
+          tr= $('<tr/>').attr('id', k);
+          if(me && k === me) { tr.addClass('success'); }
+
+          hashrate= v; doa= data.local.miner_dead_hash_rates[k];
+
+          tr.append($('<td/>')
+            .append(k));
+          tr.append($('<td/>')
+            .append(formatHashrate(hashrate)));
+          tr.append($('<td/>')
+            .append(formatHashrate(doa)));
+          tr.append($('<td/>')
+            .append(parseFloat((doa/v) * 100).toFixed(2) + '%'));
+
+          if(data.payout) {
+            tr.append($('<td/>')
+              .append(parseFloat(data.payout).toFixed(8)));
+          }
+          else {
+            tr.append($('<td/>')
+              .append($('<i/>').append('no shares yet')));
+          }
+        });
+      });
+    };
+
+    var fetchGlobalPoolStats= function(url) {
+      $.getJSON(url + '?callback=?', {
+        t: 'global_stats',
+      }, function(data) {
+      });
+    };
+
+    var fetchActiveMiners= function(url) {
+      $.getJSON(url + '?callback=?', {
+        t: 'active_miners',
+      }, function(data) {
+        $.each(data, function(k, v) {
+          // fill the user table
+          tr= $('<tr/>').attr('id', k);
+          if(k === me) { tr.addClass('success'); }
+
+          // hashrate= v; doa= data.local.miner_dead_hash_rates[k];
+
+          // create link to blockchain.info for addresses
+          blockinfo= $('<a/>')
+            .attr('href', 'https://blockchain.info/address/' + k)
+            .attr('target', '_blank').text(k);
+
+          tr.append($('<td/>').attr('class', 'text-left')
+            .append(blockinfo));
+          tr.append($('<td/>').attr('class', 'text-right')
+            .append(formatHashrate(data[k].hashrate)));
+          tr.append($('<td/>').attr('class', 'text-right')
+            .append(formatHashrate(data[k].doa_hashrate)));
+          tr.append($('<td/>').attr('class', 'text-right')
+            .append((parseFloat(data[k].doa_prop) * 100).toFixed(2) + '%'));
+
+          if(data[k].payout) {
+            tr.append($('<td/>').attr('class', 'text-right')
+              .append(parseFloat(data[k].payout).toFixed(8)));
+          }
+          else {
+            tr.append($('<td/>').attr('class', 'text-right')
+              .append($('<i/>').append('no shares yet')));
+          }
+
+          $('#'+k).remove(); $('#active_miners').append(tr);
+        });
+      });
+    };
+
+    var fetchRecentBlocks= function(url) {
+      $.getJSON(url + '?callback=?', {
+        t: 'recent_blocks',
+      }, function(data) {
+        $.each(data, function(k, v) {
+          ts= data[k].ts; num= data[k].number; hash= data[k].hash;
+          // // link to blockchain.info for the given hash
+          blockinfo= $('<a/>')
+            .attr('href', 'https://blockchain.info/de/block-index/' + hash)
+            .attr('target', '_blank').text(hash);
+
+          tr= $('<tr/>').attr('id', num);
+          tr.append($('<td/>')
+            .append($.format.prettyDate(new Date(ts * 1000))));
+          tr.append($('<td/>').append(num));
+          tr.append($('<td/>').append(blockinfo));
+          tr.append($('<td/>').html('&dash;'));
+          $('#recent_blocks').append(tr);
+        });
+      })
+    };
+
+    // var fetchData= function(url) {
+    //   $.getJSON(url + '?callback=?', function(data) {
+    //     $.each(data.local.miner_hash_rates, function(k, v) {
+    //       // fill the user table
+    //       tr= $('<tr/>').attr('id', k);
+    //       if(k === me) { tr.addClass('success'); }
+
+    //       hashrate= v; doa= data.local.miner_dead_hash_rates[k];
+
+    //       tr.append($('<td/>')
+    //         .append(k));
+    //       tr.append($('<td/>')
+    //         .append(formatHashrate(hashrate)));
+    //       tr.append($('<td/>')
+    //         .append(formatHashrate(doa)));
+    //       tr.append($('<td/>')
+    //         .append(parseFloat((doa/v) * 100).toFixed(2) + '%'));
+
+    //       if(data.users[k]) {
+    //         tr.append($('<td/>').append(data.users[k].toFixed(8)));
+    //       }
+    //       else {
+    //         tr.append($('<td/>')
+    //           .append($('<i/>').append('no shares yet')));
+    //       }
+
+    //       // FIXME: Hmmm.
+    //       $('#'+k).remove(); $('#active_miners').append(tr);
+    //     });
+
+    //     $('#updated').text($.format.date(new Date(), 'yyyy-MM-dd HH:mm:ss'));
+    //     // draw(data.graph);
+
+    //     var hashgraph= [];
+    //     $.each(data.graph1, function(key, value) {
+    //       el= []; el.push(value[0] * 1000, value[1]);
+    //       hashgraph.push(el);
+    //     });
+    //     hashgraph.sort();
+
+    //     var doagraph= [];
+    //     $.each(data.graph2, function(key, value) {
+    //       el= []; el.push(value[0] * 1000, value[1]);
+    //       doagraph.push(el);
+    //     });
+    //     doagraph.sort();
+    //     draw(hashgraph, doagraph);
+    //   });
+    // }
+
+    $(document).ready(function() {
+      // the URL to the JSONP PHP script.
+      url= 'http://xela.columba.uberspace.de/p2pool-stats/get_stats.php';
+
+      // re-fetch some data every 10 seconds
+      setInterval(function() {
+        fetchActiveMiners(url);
+        $('#updated').text($.format.date(new Date(), 'yyyy-MM-dd HH:mm:ss'));
+      }, 10 * 1000);
+
+      fetchActiveMiners(url);
+      fetchRecentBlocks(url);
+      // fetchLocalPoolStats(url);
+      // fetchData(url);
+      // fetch every n seconds
+      // setInterval(function() {
+      //   fetchData(url);
+      // }, 5 * 1000);
+
+      $('#updated').text($.format.date(new Date(), 'yyyy-MM-dd HH:mm:ss'));
+    });
+    </script>
+  </body>
+</html>
