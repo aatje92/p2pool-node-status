@@ -55,24 +55,46 @@
       <h4>Status</h4>
       <table id='status' class="table table-hover" border='0'>
         <tr>
-          <td>Local rate:</td><td id='local_rate'></td>
-          <td>Expected time to share:</td><td id='expected_time_to_share'></td>
+          <td width='25%'>Local rate:</td>
+          <td width='25%' id='local_rate'></td>
+          <td width='25%'>Expected time to share:</td>
+          <td width='25%' id='expected_time_to_share'></td>
         </tr>
         <tr>
-          <td>Global pool rate:</td><td id='global_rate'></td>
-          <td>Share difficulty</td><td id='share_difficulty'></td>
+          <td>Global pool rate:</td>
+          <td id='global_rate'></td>
+          <td>Share difficulty:</td>
+          <td id='share_difficulty'></td>
         </tr>
         <tr>
-          <td>Current block value</td><td id='block_value'></td>
-          <td>Shares:</td><td id='shares'></td>
+          <td>Current block value:</td>
+          <td id='block_value'></td>
+          <td>Shares:</td>
+          <td id='shares'></td>
         </tr>
         <tr>
-          <td>Payout if a block were found NOW</td><td id='payout_now'></td>
-          <td>Expected time to block:</td><td id='expected_time_to_block'></td>
+          <td>Payout if a block were found NOW:</td>
+          <td id='payout_now'></td>
+          <td>Expected time to block:</td>
+          <td id='expected_time_to_block'></td>
         </tr>
         <tr>
-          <td>Node peers</td><td id='node_peers'></td>
-          <td>Node uptime:</td><td id='node_uptime'></td>
+          <td>Node peers:</td>
+          <td id='node_peers'></td>
+          <td>Node uptime:</td>
+          <td id='node_uptime'></td>
+        </tr>
+        <tr>
+          <td>Node p2pool version:</td>
+          <td id='p2pool_version'></td>
+          <td>Protocol version:</td>
+          <td id='protocol_version'></td>
+        </tr>
+        <tr>
+          <td>Node fee:</td>
+          <td id='node_fee'></td>
+          <td>Node donation:</td>
+          <td id='node_donation'></td>
         </tr>
       </table>
 
@@ -101,10 +123,10 @@
     <script type="text/javascript">
 
     // define myself ... will be highlighted in results
-    var myself= '';
+    var myself= '1ASiCRtoGLCuntuEhPo61AJStVwuSUy1HG';
 
     // the hostname and port of the p2pool node
-    var node_host= 'localhost', node_port= '9332';
+    var node_host= 'thyratron.from.io', node_port= '9332';
 
     // things to remember
     var local_hashrate= 0, local_doa_hashrate= 0;
@@ -114,31 +136,23 @@
         t: 'local_stats',
         host: node_host, port: node_port,
       }, function(data) {
-        $.each(data.local.miner_hash_rates, function(k, v) {
-          // fill the user table
-          tr= $('<tr/>').attr('id', k);
-          if(myself && k === myself) { tr.addClass('success'); }
-
-          hashrate= v; doa= data.local.miner_dead_hash_rates[k];
-
-          tr.append($('<td/>')
-            .append(k));
-          tr.append($('<td/>')
-            .append(formatHashrate(hashrate)));
-          tr.append($('<td/>')
-            .append(formatHashrate(doa)));
-          tr.append($('<td/>')
-            .append(parseFloat((doa/v) * 100).toFixed(2) + '%'));
-
-          if(data.payout) {
-            tr.append($('<td/>')
-              .append(parseFloat(data.payout).toFixed(8)));
-          }
-          else {
-            tr.append($('<td/>')
-              .append($('<i/>').append('no shares yet')));
-          }
-        });
+        console.log(data);
+        // $('#local_rate').text('');
+        $('#expected_time_to_share').text();
+        $('#global_rate').text();
+        $('#share_difficulty').text(data.share_difficulty);
+        $('#block_value').text(data.block_value);
+        $('#shares').text('efficiency:' + (parseFloat(data.efficiency) * 100).toFixed(2) + '%');
+        $('#payout_now').text();
+        $('#expected_time_to_block').text();
+        $('#node_peers')
+          .text('In: ' + data.peers.incoming + ', ' +
+                'Out: ' + data.peers.outgoing);
+        $('#node_uptime').text(data.uptime);
+        $('#node_fee').text(data.fee + '%');
+        $('#node_donation').text(parseFloat(data.donation_prop).toFixed(2) + '%');
+        $('#p2pool_version').text(data.p2pool_version);
+        $('#protocol_version').text(data.protocol_version);
         setUpdateTime();
       });
     };
@@ -240,7 +254,6 @@
         i: 'day', // get the daily interval for now
         host: node_host, port: node_port,
       }, function(data) {
-        console.log(data);
         hashrate= data.hashrate; doa= data.doa_hashrate;
         hashgraph= []; doagraph= [];
         $.each(hashrate, function(key, value) {
@@ -272,16 +285,19 @@
       $('#node').append(node_link);
 
       // the URL to the JSONP PHP script.
-      url= 'jsonp.php';
+      url= '/p2pool-stats/jsonp.php';
 
       // re-fetch some data every 10 seconds
       setInterval(function() {
         fetchActiveMiners(url);
-      }, 30 * 1000);
+        fetchLocalPoolStats(url);
+      }, 5 * 1000);
 
       fetchActiveMiners(url);
       fetchRecentBlocks(url);
       fetchHashrateGraph(url);
+      fetchLocalPoolStats(url);
+
       $('#updated')
         .text($.format.date(
           new Date(), 'yyyy-MM-dd HH:mm:ss'));

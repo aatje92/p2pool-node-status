@@ -3,6 +3,8 @@
 // JSONP handler for index.html retrieving the required information
 // from p2pool host and returns a JSONP to the caller.
 
+// use this debug to run and debug the PHP on command line
+
 // $debug= true;
 $debug= false;
 
@@ -14,10 +16,14 @@ if($debug) {
   $_GET['port']= '9332';
 }
 
+// ======================================================================
+
 if(!isset($_GET['host']) || !isset($_GET['port'])) {
   sendJSON($_GET['callback'],
     array('etx' => 'Missing attribute: host or port', 'ecd' => 42));
 }
+
+// ======================================================================
 
 // API url
 $p2pool_url= 'http://'.$_GET['host'].":".$_GET['port'];
@@ -99,15 +105,20 @@ function getLocalStats() {
   global $p2pool_api;
   $local_stats= fetchJSON($p2pool_api['local_stats']);
   $share_diff= fetchJSON($p2pool_api['difficulty']);
-  $fee= fetchJSON($p2pool_api['fee']);
-  $rate= fetchJSON($p2pool_api['rate']);
-
-  sendJSON('foobar', $local_stats);
 
   $local= array();
   // time to block in seconds
   $local['time_to_block']= $local_stats['attempts_to_block'] / $rate;
   $local['time_to_share']= $local_stats['attempts_to_share'] / $rate;
+  $local['fee']= $local_stats['fee'];
+  $local['uptime']= $local_stats['uptime'];
+  $local['p2pool_version']= $local_stats['version'];
+  $local['protcol_version']= $local_stats['protocol_version'];
+  $local['peers']= $local_stats['peers'];
+  $local['block_value']= $local_stats['block_value'];
+  $local['efficiency']= $local_stats['efficiency'];
+  $local['donation_prop']= $local_stats['donation_proportion'];
+  $local['share_difficulty']= $share_diff;
   return $local;
 }
 
